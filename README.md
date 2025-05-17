@@ -1,34 +1,40 @@
 # Hate Speech Detection Web Application
 
-A web-based application that uses machine learning to detect and classify hate speech and offensive language in text content. The application provides real-time analysis with confidence scores and visual feedback.
+A machine learning-powered web application that detects and classifies hate speech and offensive language in text content. Built with Flask and modern web technologies, this tool provides real-time analysis with visual feedback and confidence scores.
 
-## Features
+## 🚀 Features
 
-- Real-time text analysis
-- Classification of content into three categories:
-  - Hate Speech
-  - Offensive Language
+- **Real-time Text Analysis**: Instantly analyze any text input
+- **Three-tier Classification**:
+  - Hate Speech Detection
+  - Offensive Language Detection
   - Neutral Content
-- Confidence score visualization
-- Modern, responsive UI with glass-morphism design
-- Real-time feedback with color-coded results
+- **Visual Feedback**:
+  - Color-coded results (Red for hate speech, Yellow for offensive, Green for neutral)
+  - Confidence score visualization
+  - Progress bar with percentage
+- **Modern UI**:
+  - Clean, responsive design
+  - Glass-morphism effects
+  - Smooth animations
+  - Mobile-friendly interface
 
-## Tech Stack
+## 🛠️ Technologies Used
 
-- **Frontend:**
-  - HTML5
-  - Tailwind CSS
-  - JavaScript
-  - Font Awesome Icons
+### Frontend
+- HTML5
+- Tailwind CSS (for styling)
+- JavaScript (Vanilla)
+- Font Awesome Icons
 
-- **Backend:**
-  - Python
-  - Flask
-  - Machine Learning Model (specify your model here)
+### Backend
+- Python 3.x
+- Flask (Web framework)
+- TensorFlow/Keras (ML model)
+- NLTK (Natural Language Processing)
 
-## Prerequisites
+## 📋 Prerequisites
 
 - Python 3.8 or higher
 - pip (Python package manager)
-- Virtual environment (recommended)
-
+- Git
