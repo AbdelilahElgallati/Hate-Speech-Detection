@@ -47,6 +47,12 @@ log/
 .env.local
 .env.*.local
 
+# Model files
+*.h5
+*.pkl
+*.model
+*.bin
+
 # Distribution / packaging
 .Python
 build/
@@ -64,4 +70,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+.env
+__pycache__/
+*.pyc
 

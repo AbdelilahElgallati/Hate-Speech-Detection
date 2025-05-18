@@ -16,6 +16,8 @@
         }
     ],
     "env": {
-        "PYTHONPATH": "."
+        "PYTHONPATH": ".",
+        "HF_TOKEN": "@hf_token",
+        "HF_REPO_ID": "@hf_repo_id"
     }
 } 

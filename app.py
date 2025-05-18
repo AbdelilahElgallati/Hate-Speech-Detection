@@ -7,6 +7,8 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
 import os
+from huggingface_hub import hf_hub_download
+from config import HF_TOKEN, HF_REPO_ID
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -18,6 +20,19 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 model = None
 tokenizer = None
 
+def download_from_hf(repo_id, filename):
+    """Download a file from Hugging Face Hub"""
+    try:
+        file_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+            token=HF_TOKEN
+        )
+        return file_path
+    except Exception as e:
+        print(f"Error downloading from Hugging Face: {str(e)}")
+        return None
+
 def create_response(data, status_code=200):
     """Helper function to create consistent JSON responses"""
     response = make_response(jsonify(data))
@@ -27,12 +42,25 @@ def create_response(data, status_code=200):
 def load_resources():
     global model, tokenizer
     try:
+        if not HF_TOKEN:
+            raise ValueError("HF_TOKEN environment variable not set")
+
+        # Download model file
+        model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
+        if not model_path:
+            raise Exception("Failed to download model file")
+        
+        # Download tokenizer file
+        tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
+        if not tokenizer_path:
+            raise Exception("Failed to download tokenizer file")
+
         # Load the trained model
-        model = load_model('model_hate_speech.h5', compile=False)
+        model = load_model(model_path, compile=False)
         print("Model loaded successfully")
         
         # Load the tokenizer
-        with open('tokenizer.pkl', 'rb') as handle:
+        with open(tokenizer_path, 'rb') as handle:
             tokenizer = pickle.load(handle)
         print("Tokenizer loaded successfully")
         
