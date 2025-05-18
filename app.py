@@ -28,7 +28,7 @@ def load_resources():
     global model, tokenizer
     try:
         # Load the trained model
-        model = load_model('model_hate_speech.h5')
+        model = load_model('model_hate_speech.h5', compile=False)
         print("Model loaded successfully")
         
         # Load the tokenizer
