@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 import numpy as np
@@ -8,6 +9,7 @@ import pickle
 import os
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -15,6 +17,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # Global variables for model and tokenizer
 model = None
 tokenizer = None
+
+def create_response(data, status_code=200):
+    """Helper function to create consistent JSON responses"""
+    response = make_response(jsonify(data))
+    response.headers['Content-Type'] = 'application/json'
+    return response, status_code
 
 def load_resources():
     global model, tokenizer
@@ -78,40 +86,127 @@ def predict_hate_speech(text):
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return create_response({
+        'status': 'success',
+        'message': 'Hate Speech Detection API',
+        'endpoints': {
+            'health': '/health',
+            'predict': '/predict'
+        },
+        'usage': {
+            'predict': {
+                'method': 'POST',
+                'url': '/predict',
+                'headers': {
+                    'Content-Type': 'application/json'
+                },
+                'body': {
+                    'text': 'Your text to analyze'
+                },
+                'example': {
+                    'curl': 'curl -X POST http://localhost:5000/predict -H "Content-Type: application/json" -d \'{"text": "your text to analyze"}\''
+                }
+            }
+        }
+    })
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for API monitoring"""
+    try:
+        if model is None or tokenizer is None:
+            return create_response({
+                'status': 'error',
+                'message': 'Model or tokenizer not loaded'
+            }, 503)
+        return create_response({
+            'status': 'success',
+            'message': 'Service is running',
+            'model_loaded': model is not None,
+            'tokenizer_loaded': tokenizer is not None
+        })
+    except Exception as e:
+        return create_response({
+            'status': 'error',
+            'message': str(e)
+        }, 500)
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
+        # Check content type
+        if not request.is_json:
+            return create_response({
+                'status': 'error',
+                'message': 'Content-Type must be application/json',
+                'example': {
+                    'headers': {
+                        'Content-Type': 'application/json'
+                    },
+                    'body': {
+                        'text': 'Your text to analyze'
+                    }
+                }
+            }, 415)
+
         # Check if model and tokenizer are loaded
         if model is None or tokenizer is None:
-            return jsonify({'error': 'Model not properly loaded. Please check server logs.'})
+            return create_response({
+                'status': 'error',
+                'message': 'Model not properly loaded. Please check server logs.'
+            }, 503)
         
-        text = request.json.get('text', '')
-        if not text:
-            return jsonify({'error': 'No text provided'})
+        # Get and validate input
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return create_response({
+                'status': 'error',
+                'message': 'No text provided in request body',
+                'example': {
+                    'text': 'Your text to analyze'
+                }
+            }, 400)
         
+        text = data['text']
+        if not text.strip():
+            return create_response({
+                'status': 'error',
+                'message': 'Empty text provided'
+            }, 400)
+        
+        # Make prediction
         predicted_label, confidence = predict_hate_speech(text)
         
-        if predicted_label is None:
-            return jsonify({'error': 'Error during prediction. Please check server logs.'})
+        print(predicted_label)
+        print(confidence)
         
-        return jsonify({
-            'prediction': predicted_label,
-            'confidence': f"{confidence:.2%}"
+        if predicted_label is None:
+            return create_response({
+                'status': 'error',
+                'message': 'Error during prediction. Please check server logs.'
+            }, 500)
+        
+        return create_response({
+            'status': 'success',
+            'data': {
+                'prediction': predicted_label,
+                'confidence': f"{confidence:.2%}",
+                'input_text': text
+            }
         })
     except Exception as e:
-        print(f"Error in predict route: {str(e)}")
-        return jsonify({'error': str(e)})
+        return create_response({
+            'status': 'error',
+            'message': str(e)
+        }, 500)
 
 if __name__ == '__main__':
-    # Make sure the templates directory exists
-    if not os.path.exists('templates'):
-        os.makedirs('templates')
-    
     # Check if resources are loaded
     if not load_resources():
         print("Warning: Resources not loaded properly. The app may not work correctly.")
     
+    # Get port from environment variable or use default
+    port = int(os.environ.get('PORT', 5000))
+    
     # Run the app
-    app.run(debug=True, port=5000) 
+    app.run(host='0.0.0.0', port=port) 
