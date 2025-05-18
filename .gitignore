@@ -1,3 +1,14 @@
+# Model files
+*.h5
+*.pkl
+*.model
+*.joblib
+*.pth
+*.pt
+*.ckpt
+*.weights
+*.bin
+
 # Python
 __pycache__/
 *.py[cod]
@@ -25,18 +36,45 @@ venv/
 env/
 ENV/
 .env
+.venv
+env.bak/
+venv.bak/
 
-# IDE
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDE specific files
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
 
-# Project specific
+# Logs
 *.log
-*.csv
-*.pkl
-*.h5
-*.model
-*.joblib 
+logs/
+log/
+
+# Local development settings
+.env
+.env.local
+.env.*.local
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg 
