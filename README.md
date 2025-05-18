@@ -24,8 +24,7 @@ A machine learning-based API for detecting hate speech and offensive language in
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd hate-speech-detection
+git clone https://github.com/AbdelilahElgallati/Hate-Speech-Detection/
 ```
 
 2. Create and activate a virtual environment (recommended):
@@ -63,7 +62,7 @@ hate-speech-detection/
 
 ## Model Training
 
-The model training process is documented in the `model_training.ipynb` Jupyter notebook. This notebook contains:
+The model training process is documented in the `HateSpeechModel.ipynb` Jupyter notebook. This notebook contains:
 
 1. Data preprocessing steps
 2. Model architecture definition
@@ -157,46 +156,6 @@ These files are required for running the API.
 }
 ```
 
-## Usage Examples
-
-### Using curl
-```bash
-curl -X POST http://localhost:5000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"text": "your text to analyze"}'
-```
-
-### Using Python
-```python
-import requests
-
-url = "http://localhost:5000/predict"
-headers = {
-    "Content-Type": "application/json"
-}
-data = {
-    "text": "your text to analyze"
-}
-
-response = requests.post(url, json=data, headers=headers)
-print(response.json())
-```
-
-### Using JavaScript
-```javascript
-fetch('http://localhost:5000/predict', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        text: 'your text to analyze'
-    })
-})
-.then(response => response.json())
-.then(data => console.log(data));
-```
-
 ## Running the Application
 
 1. Make sure you have all the required files:
@@ -241,38 +200,6 @@ The API provides detailed error messages for various scenarios:
 }
 ```
 
-## Deployment
-
-To deploy the application:
-
-1. Set the `PORT` environment variable if you want to use a different port:
-```bash
-# Windows
-set PORT=8080
-python app.py
-
-# Linux/Mac
-export PORT=8080
-python app.py
-```
-
-2. For production deployment, it's recommended to use a WSGI server like Gunicorn:
-```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
