@@ -1,0 +1,13 @@
+[build]
+  command = "pip install -r requirements.txt"
+  publish = "."
+  functions = "functions"
+
+[functions]
+  directory = "functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200 
