@@ -1,0 +1,17 @@
+# Dataset
+hate-speech-and-offensive-language-dataset.csv
+
+# Model files (these will be downloaded from Hugging Face)
+*.h5
+*.pkl
+
+# Development files
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+.git/
+.gitignore
+README.md
+*.ipynb 
