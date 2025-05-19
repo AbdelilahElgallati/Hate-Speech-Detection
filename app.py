@@ -10,6 +10,13 @@ import os
 from huggingface_hub import hf_hub_download
 from config import HF_TOKEN, HF_REPO_ID
 
+# Debug prints for environment
+print("Current working directory:", os.getcwd())
+print("Environment variables:")
+print("HF_TOKEN:", HF_TOKEN)
+print("HF_REPO_ID:", HF_REPO_ID)
+print("Files in current directory:", os.listdir('.'))
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
@@ -23,11 +30,13 @@ tokenizer = None
 def download_from_hf(repo_id, filename):
     """Download a file from Hugging Face Hub"""
     try:
+        print(f"Attempting to download {filename} from {repo_id}")
         file_path = hf_hub_download(
             repo_id=repo_id,
             filename=filename,
             token=HF_TOKEN
         )
+        print(f"Successfully downloaded {filename} to {file_path}")
         return file_path
     except Exception as e:
         print(f"Error downloading from Hugging Face: {str(e)}")
@@ -42,27 +51,33 @@ def create_response(data, status_code=200):
 def load_resources():
     global model, tokenizer
     try:
-        if not HF_TOKEN:
-            raise ValueError("HF_TOKEN environment variable not set")
-
-        # Download model file
-        model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
-        if not model_path:
-            raise Exception("Failed to download model file")
+        # Use local model and tokenizer files
+        model_path = 'model_hate_speech.h5'
+        tokenizer_path = 'tokenizer.pkl'
         
-        # Download tokenizer file
-        tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
-        if not tokenizer_path:
-            raise Exception("Failed to download tokenizer file")
-
-        # Load the trained model
-        model = load_model(model_path, compile=False)
-        print("Model loaded successfully")
+        print(f"Loading model from: {model_path}")
+        print(f"Loading tokenizer from: {tokenizer_path}")
         
-        # Load the tokenizer
-        with open(tokenizer_path, 'rb') as handle:
-            tokenizer = pickle.load(handle)
-        print("Tokenizer loaded successfully")
+        try:
+            # Try loading with different approaches
+            # First attempt: Load with custom_objects
+            # model = load_model(model_path, compile=False, custom_objects={'tf': tf})
+            model = load_model(download_from_hf(HF_REPO_ID, 'model_hate_speech.h5'), compile=False)
+            print("Model loaded successfully")
+        except Exception as model_error:
+            print(f"Error loading model: {str(model_error)}")
+            print(f"TensorFlow version: {tf.__version__}")
+            raise
+        
+        try:
+            # Load the tokenizer
+            tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
+            with open(tokenizer_path, 'rb') as f:
+                tokenizer = pickle.load(f)
+            print("Tokenizer loaded successfully")
+        except Exception as tokenizer_error:
+            print(f"Error loading tokenizer: {str(tokenizer_error)}")
+            raise
         
         return True
     except Exception as e:
