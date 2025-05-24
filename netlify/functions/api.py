@@ -92,6 +92,15 @@ def handler(event, context):
     # Remove /api prefix if present
     if path.startswith('/api'):
         path = path[4:]
+
+    if path == '/' or path == '':
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'status': 'success',
+                'message': 'Service is running',
+            })
+        }
     
     # Handle different endpoints
     if path == '/health' or path == 'health':
