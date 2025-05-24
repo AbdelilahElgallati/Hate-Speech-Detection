@@ -89,9 +89,12 @@ def handler(event, context):
 
     # Get the path from the event
     path = event.get('path', '')
+    # Remove /api prefix if present
+    if path.startswith('/api'):
+        path = path[4:]
     
     # Handle different endpoints
-    if path == '/api/health':
+    if path == '/health' or path == 'health':
         return {
             'statusCode': 200,
             'body': json.dumps({
@@ -102,7 +105,7 @@ def handler(event, context):
             })
         }
     
-    elif path == '/api/predict':
+    elif path == '/predict' or path == 'predict':
         if event.get('httpMethod') != 'POST':
             return {
                 'statusCode': 405,
