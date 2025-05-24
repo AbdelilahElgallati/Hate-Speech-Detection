@@ -51,56 +51,32 @@ def create_response(data, status_code=200):
 def load_resources():
     global model, tokenizer
     try:
-        print("Starting to load resources...")
+        print("Starting to load resources from Hugging Face...")
         
-        # First try to load from local files
-        model_path = 'model_hate_speech.h5'
-        tokenizer_path = 'tokenizer.pkl'
-        
-        print(f"Attempting to load local model from: {model_path}")
-        print(f"Attempting to load local tokenizer from: {tokenizer_path}")
-        
+        # Download and load model from Hugging Face
         try:
-            # Try loading model locally first
-            model = load_model(model_path, compile=False)
-            print("Model loaded successfully from local file")
-        except Exception as local_model_error:
-            print(f"Could not load local model: {str(local_model_error)}")
-            print("Attempting to download from Hugging Face...")
-            
-            try:
-                # Try downloading from Hugging Face
-                model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
-                if model_path:
-                    model = load_model(model_path, compile=False)
-                    print("Model loaded successfully from Hugging Face")
-                else:
-                    raise Exception("Failed to download model from Hugging Face")
-            except Exception as hf_model_error:
-                print(f"Error loading model from Hugging Face: {str(hf_model_error)}")
-                raise
+            model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
+            if model_path:
+                model = load_model(model_path, compile=False)
+                print("Model loaded successfully from Hugging Face")
+            else:
+                raise Exception("Failed to download model from Hugging Face")
+        except Exception as hf_model_error:
+            print(f"Error loading model from Hugging Face: {str(hf_model_error)}")
+            raise
         
+        # Download and load tokenizer from Hugging Face
         try:
-            # Try loading tokenizer locally first
-            with open(tokenizer_path, 'rb') as f:
-                tokenizer = pickle.load(f)
-            print("Tokenizer loaded successfully from local file")
-        except Exception as local_tokenizer_error:
-            print(f"Could not load local tokenizer: {str(local_tokenizer_error)}")
-            print("Attempting to download from Hugging Face...")
-            
-            try:
-                # Try downloading from Hugging Face
-                tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
-                if tokenizer_path:
-                    with open(tokenizer_path, 'rb') as f:
-                        tokenizer = pickle.load(f)
-                    print("Tokenizer loaded successfully from Hugging Face")
-                else:
-                    raise Exception("Failed to download tokenizer from Hugging Face")
-            except Exception as hf_tokenizer_error:
-                print(f"Error loading tokenizer from Hugging Face: {str(hf_tokenizer_error)}")
-                raise
+            tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
+            if tokenizer_path:
+                with open(tokenizer_path, 'rb') as f:
+                    tokenizer = pickle.load(f)
+                print("Tokenizer loaded successfully from Hugging Face")
+            else:
+                raise Exception("Failed to download tokenizer from Hugging Face")
+        except Exception as hf_tokenizer_error:
+            print(f"Error loading tokenizer from Hugging Face: {str(hf_tokenizer_error)}")
+            raise
         
         if model is None or tokenizer is None:
             raise Exception("Model or tokenizer failed to load")
