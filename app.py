@@ -57,9 +57,18 @@ def load_resources():
         try:
             model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
             if model_path:
-                # Load model with custom_objects to handle compatibility
+                # Create a custom InputLayer class that converts batch_shape to shape
+                class CustomInputLayer(tf.keras.layers.InputLayer):
+                    def __init__(self, **kwargs):
+                        if 'batch_shape' in kwargs:
+                            # Convert batch_shape to shape by removing the batch dimension
+                            batch_shape = kwargs.pop('batch_shape')
+                            kwargs['shape'] = batch_shape[1:]
+                        super().__init__(**kwargs)
+                
+                # Load model with custom objects
                 model = load_model(model_path, compile=False, 
-                                 custom_objects={'InputLayer': tf.keras.layers.InputLayer})
+                                 custom_objects={'InputLayer': CustomInputLayer})
                 print("Model loaded successfully from Hugging Face")
             else:
                 raise Exception("Failed to download model from Hugging Face")
