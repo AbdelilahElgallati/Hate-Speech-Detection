@@ -1,3 +1,4 @@
+import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
@@ -6,7 +7,6 @@ import numpy as np
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
-import os
 from huggingface_hub import hf_hub_download
 from config import HF_TOKEN, HF_REPO_ID
 
@@ -36,10 +36,15 @@ def load_resources():
         model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
         tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
         
+        if model_path is None or tokenizer_path is None:
+            print("Failed to download model or tokenizer")
+            return False
+        
         model = load_model(model_path, compile=False)
         with open(tokenizer_path, 'rb') as f:
             tokenizer = pickle.load(f)
         
+        print("Model and tokenizer loaded successfully")
         return True
     except Exception as e:
         print(f"Error loading resources: {str(e)}")
@@ -48,6 +53,7 @@ def load_resources():
 def predict_hate_speech(text):
     try:
         if model is None or tokenizer is None:
+            print("Model or tokenizer not loaded")
             return None, None
             
         # Preprocess the text
@@ -70,7 +76,7 @@ def predict_hate_speech(text):
         print(f"Error during prediction: {str(e)}")
         return None, None
 
-@app.route('/.netlify/functions/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
     try:
         if model is None or tokenizer is None:
@@ -83,14 +89,14 @@ def health_check():
             'message': 'Service is running',
             'model_loaded': model is not None,
             'tokenizer_loaded': tokenizer is not None
-        })
+        }), 200
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': str(e)
         }), 500
 
-@app.route('/.netlify/functions/api/predict', methods=['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
     try:
         if not request.is_json:
@@ -134,7 +140,7 @@ def predict():
                 'confidence': f"{confidence:.2%}",
                 'input_text': text
             }
-        })
+        }), 200
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -146,4 +152,5 @@ load_resources()
 
 def handler(event, context):
     """Netlify serverless function handler"""
-    return app(event, context) 
+    from serverless_wsgi import handle_request
+    return handle_request(app, event, context)
