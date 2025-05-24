@@ -1,3 +1,4 @@
+<DOCUMENT filename="api.py">
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -76,7 +77,7 @@ def predict_hate_speech(text):
         print(f"Error during prediction: {str(e)}")
         return None, None
 
-@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])  # Updated to /api/health
 def health_check():
     try:
         if model is None or tokenizer is None:
@@ -96,7 +97,7 @@ def health_check():
             'message': str(e)
         }), 500
 
-@app.route('/predict', methods=['POST'])
+@app.route('/api/predict', methods=['POST'])
 def predict():
     try:
         if not request.is_json:
@@ -154,3 +155,4 @@ def handler(event, context):
     """Netlify serverless function handler"""
     from serverless_wsgi import handle_request
     return handle_request(app, event, context)
+</DOCUMENT>
