@@ -5,3 +5,4 @@ tensorflow-cpu==2.16.1
 numpy==1.24.3
 huggingface-hub==0.21.4
 gunicorn==21.2.0
+Werkzeug==2.0.1
