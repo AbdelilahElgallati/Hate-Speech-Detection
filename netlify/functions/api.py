@@ -98,7 +98,24 @@ def handler(event, context):
             'statusCode': 200,
             'body': json.dumps({
                 'status': 'success',
-                'message': 'Service is running',
+                'message': 'Welcome to Hate Speech Detection API',
+                'description': 'This API helps detect hate speech and offensive language in text',
+                'endpoints': {
+                    'health': '/api/health',
+                    'predict': '/api/predict'
+                },
+                'usage': {
+                    'predict': {
+                        'method': 'POST',
+                        'url': '/api/predict',
+                        'headers': {
+                            'Content-Type': 'application/json'
+                        },
+                        'body': {
+                            'text': 'Your text to analyze'
+                        }
+                    }
+                }
             })
         }
     
