@@ -14,3 +14,6 @@
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
+
+[functions.environment]
+  PYTHON_VERSION = "3.9"
