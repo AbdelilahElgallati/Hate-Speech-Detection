@@ -1,4 +1,3 @@
-<DOCUMENT filename="api.py">
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -14,7 +13,6 @@ from config import HF_TOKEN, HF_REPO_ID
 app = Flask(__name__)
 CORS(app)
 
-# Global variables for model and tokenizer
 model = None
 tokenizer = None
 
@@ -155,4 +153,3 @@ def handler(event, context):
     """Netlify serverless function handler"""
     from serverless_wsgi import handle_request
     return handle_request(app, event, context)
-</DOCUMENT>
