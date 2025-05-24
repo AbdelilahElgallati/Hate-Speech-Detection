@@ -16,4 +16,4 @@ print("HF_REPO_ID in env:", os.getenv('HF_REPO_ID'))
 
 # Hugging Face Configuration
 HF_TOKEN = os.getenv('HF_TOKEN')
-HF_REPO_ID = os.getenv('HF_REPO_ID', 'AbdelilahElgallati/Hate-detection-model')
+HF_REPO_ID = os.getenv('HF_REPO_ID', 'AbdelilahElgallati/Hate-model-detection')
