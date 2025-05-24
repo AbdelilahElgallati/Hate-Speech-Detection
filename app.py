@@ -57,7 +57,9 @@ def load_resources():
         try:
             model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
             if model_path:
-                model = load_model(model_path, compile=False)
+                # Load model with custom_objects to handle compatibility
+                model = load_model(model_path, compile=False, 
+                                 custom_objects={'InputLayer': tf.keras.layers.InputLayer})
                 print("Model loaded successfully from Hugging Face")
             else:
                 raise Exception("Failed to download model from Hugging Face")
