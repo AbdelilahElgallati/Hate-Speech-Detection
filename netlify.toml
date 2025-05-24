@@ -3,6 +3,9 @@
   functions = "netlify/functions"
   publish = "public"
 
+[build.environment]
+  PYTHON_VERSION = "3.10"
+
 [functions]
   node_bundler = "esbuild"
 
