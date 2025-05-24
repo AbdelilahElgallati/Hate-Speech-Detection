@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, render_template
 from flask_cors import CORS
 import tensorflow as tf
 from tensorflow.keras.models import load_model
@@ -51,37 +51,65 @@ def create_response(data, status_code=200):
 def load_resources():
     global model, tokenizer
     try:
-        # Use local model and tokenizer files
+        print("Starting to load resources...")
+        
+        # First try to load from local files
         model_path = 'model_hate_speech.h5'
         tokenizer_path = 'tokenizer.pkl'
         
-        print(f"Loading model from: {model_path}")
-        print(f"Loading tokenizer from: {tokenizer_path}")
+        print(f"Attempting to load local model from: {model_path}")
+        print(f"Attempting to load local tokenizer from: {tokenizer_path}")
         
         try:
-            # Try loading with different approaches
-            # First attempt: Load with custom_objects
-            # model = load_model(model_path, compile=False, custom_objects={'tf': tf})
-            model = load_model(download_from_hf(HF_REPO_ID, 'model_hate_speech.h5'), compile=False)
-            print("Model loaded successfully")
-        except Exception as model_error:
-            print(f"Error loading model: {str(model_error)}")
-            print(f"TensorFlow version: {tf.__version__}")
-            raise
+            # Try loading model locally first
+            model = load_model(model_path, compile=False)
+            print("Model loaded successfully from local file")
+        except Exception as local_model_error:
+            print(f"Could not load local model: {str(local_model_error)}")
+            print("Attempting to download from Hugging Face...")
+            
+            try:
+                # Try downloading from Hugging Face
+                model_path = download_from_hf(HF_REPO_ID, 'model_hate_speech.h5')
+                if model_path:
+                    model = load_model(model_path, compile=False)
+                    print("Model loaded successfully from Hugging Face")
+                else:
+                    raise Exception("Failed to download model from Hugging Face")
+            except Exception as hf_model_error:
+                print(f"Error loading model from Hugging Face: {str(hf_model_error)}")
+                raise
         
         try:
-            # Load the tokenizer
-            tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
+            # Try loading tokenizer locally first
             with open(tokenizer_path, 'rb') as f:
                 tokenizer = pickle.load(f)
-            print("Tokenizer loaded successfully")
-        except Exception as tokenizer_error:
-            print(f"Error loading tokenizer: {str(tokenizer_error)}")
-            raise
+            print("Tokenizer loaded successfully from local file")
+        except Exception as local_tokenizer_error:
+            print(f"Could not load local tokenizer: {str(local_tokenizer_error)}")
+            print("Attempting to download from Hugging Face...")
+            
+            try:
+                # Try downloading from Hugging Face
+                tokenizer_path = download_from_hf(HF_REPO_ID, 'tokenizer.pkl')
+                if tokenizer_path:
+                    with open(tokenizer_path, 'rb') as f:
+                        tokenizer = pickle.load(f)
+                    print("Tokenizer loaded successfully from Hugging Face")
+                else:
+                    raise Exception("Failed to download tokenizer from Hugging Face")
+            except Exception as hf_tokenizer_error:
+                print(f"Error loading tokenizer from Hugging Face: {str(hf_tokenizer_error)}")
+                raise
         
+        if model is None or tokenizer is None:
+            raise Exception("Model or tokenizer failed to load")
+            
+        print("All resources loaded successfully!")
         return True
+        
     except Exception as e:
-        print(f"Error loading resources: {str(e)}")
+        print(f"Critical error loading resources: {str(e)}")
         return False
 
 # Load resources when starting the app
@@ -127,31 +155,24 @@ def predict_hate_speech(text):
         print(f"Error during prediction: {str(e)}")
         return None, None
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
-    return create_response({
-        'status': 'success',
-        'message': 'Hate Speech Detection API',
-        'endpoints': {
-            'health': '/health',
-            'predict': '/predict'
-        },
-        'usage': {
-            'predict': {
-                'method': 'POST',
-                'url': '/predict',
-                'headers': {
-                    'Content-Type': 'application/json'
-                },
-                'body': {
-                    'text': 'Your text to analyze'
-                },
-                'example': {
-                    'curl': 'curl -X POST http://localhost:5000/predict -H "Content-Type: application/json" -d \'{"text": "your text to analyze"}\''
-                }
-            }
-        }
-    })
+    if request.method == 'POST':
+        text = request.form.get('text', '')
+        if not text.strip():
+            return render_template('index.html', error='Please enter some text to analyze')
+        
+        predicted_label, confidence = predict_hate_speech(text)
+        
+        if predicted_label is None:
+            return render_template('index.html', error='Error during prediction. Please try again.')
+        
+        return render_template('index.html', 
+                             prediction=predicted_label,
+                             confidence=f"{confidence:.2%}",
+                             text=text)
+    
+    return render_template('index.html')
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -220,9 +241,6 @@ def predict():
         # Make prediction
         predicted_label, confidence = predict_hate_speech(text)
         
-        print(predicted_label)
-        print(confidence)
-        
         if predicted_label is None:
             return create_response({
                 'status': 'error',
@@ -243,6 +261,7 @@ def predict():
             'message': str(e)
         }, 500)
 
+# For local development
 if __name__ == '__main__':
     # Check if resources are loaded
     if not load_resources():
