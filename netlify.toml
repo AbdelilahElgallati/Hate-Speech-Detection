@@ -15,5 +15,11 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
+
 [functions.environment]
   PYTHON_VERSION = "3.9"
