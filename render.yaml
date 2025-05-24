@@ -2,7 +2,9 @@ services:
   - type: web
     name: hate-speech-detection
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: gunicorn app:app --config gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION
@@ -10,6 +12,8 @@ services:
       - key: PORT
         value: 8000
       - key: HF_TOKEN
-        sync: false  # This means you'll need to set this value in the Render dashboard
+        sync: false
       - key: HF_REPO_ID
-        value: "your-repo-id"  # Replace with your actual Hugging Face repo ID 
+        value: "AbdelilahElgallati/Hate-model-detection"
+    healthCheckPath: /health
+    autoDeploy: true 

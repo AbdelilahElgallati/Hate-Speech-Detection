@@ -1,10 +1,33 @@
 import os
+import multiprocessing
 
-# Get the port from the environment variable, default to 8000 if not set
+# Server socket
 port = int(os.environ.get("PORT", 8000))
-
-# Gunicorn configuration
 bind = f"0.0.0.0:{port}"
-workers = 1  # Single worker for CPU-bound tasks
-threads = 2  # Multiple threads per worker
-timeout = 120  # Increase timeout for model loading 
+
+# Worker processes
+workers = multiprocessing.cpu_count() * 2 + 1
+worker_class = 'sync'
+worker_connections = 1000
+timeout = 120
+keepalive = 2
+
+# Logging
+accesslog = '-'
+errorlog = '-'
+loglevel = 'info'
+
+# Process naming
+proc_name = 'hate-speech-detection'
+
+# Server mechanics
+daemon = False
+pidfile = None
+umask = 0
+user = None
+group = None
+tmp_upload_dir = None
+
+# SSL
+keyfile = None
+certfile = None 
