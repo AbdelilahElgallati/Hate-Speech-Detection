@@ -8,14 +8,42 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
 import os
 from huggingface_hub import hf_hub_download
-from config import HF_TOKEN, HF_REPO_ID
+from config import (
+    API_KEY, RATE_LIMIT, RATE_LIMIT_WINDOW,
+    CACHE_SIZE, CACHE_TTL,
+    HF_TOKEN, HF_REPO_ID,
+    PORT, DEBUG, LOG_LEVEL
+)
+from dotenv import load_dotenv
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from functools import wraps, lru_cache
+import time
+from datetime import datetime, timedelta
+import logging
+from logging.handlers import RotatingFileHandler
+import hashlib
 
-# Debug prints for environment
-print("Current working directory:", os.getcwd())
-print("Environment variables:")
-print("HF_TOKEN:", HF_TOKEN)
-print("HF_REPO_ID:", HF_REPO_ID)
-print("Files in current directory:", os.listdir('.'))
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=getattr(logging, LOG_LEVEL))
+logger = logging.getLogger(__name__)
+
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+# Add file handler for logging
+file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+file_handler.setLevel(getattr(logging, LOG_LEVEL))
+logger.addHandler(file_handler)
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -27,16 +55,71 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 model = None
 tokenizer = None
 
+# Store rate limiting data
+rate_limit_data = {}
+
+# Initialize cache
+prediction_cache = {}
+
+def get_cache_key(text):
+    """Generate a cache key for the input text"""
+    return hashlib.md5(text.encode()).hexdigest()
+
+def get_cached_prediction(text):
+    """Get prediction from cache if available and not expired"""
+    cache_key = get_cache_key(text)
+    if cache_key in prediction_cache:
+        cached_data = prediction_cache[cache_key]
+        if time.time() - cached_data['timestamp'] < CACHE_TTL:
+            logger.info(f"Cache hit for text: {text[:100]}...")
+            return cached_data['prediction']
+    return None
+
+def cache_prediction(text, prediction):
+    """Cache the prediction result"""
+    cache_key = get_cache_key(text)
+    prediction_cache[cache_key] = {
+        'prediction': prediction,
+        'timestamp': time.time()
+    }
+    
+    # Remove oldest entries if cache is full
+    if len(prediction_cache) > CACHE_SIZE:
+        oldest_key = min(prediction_cache.keys(), 
+                        key=lambda k: prediction_cache[k]['timestamp'])
+        del prediction_cache[oldest_key]
+
+def check_rate_limit(ip_address):
+    """Check if the IP address has exceeded the rate limit"""
+    current_time = time.time()
+    if ip_address not in rate_limit_data:
+        rate_limit_data[ip_address] = {
+            'requests': [],
+            'limit': RATE_LIMIT
+        }
+    
+    # Clean old requests
+    rate_limit_data[ip_address]['requests'] = [
+        req_time for req_time in rate_limit_data[ip_address]['requests']
+        if current_time - req_time < RATE_LIMIT_WINDOW
+    ]
+    
+    # Check if rate limit exceeded
+    if len(rate_limit_data[ip_address]['requests']) >= rate_limit_data[ip_address]['limit']:
+        return False
+    
+    # Add new request
+    rate_limit_data[ip_address]['requests'].append(current_time)
+    return True
+
 def download_from_hf(repo_id, filename):
     """Download a file from Hugging Face Hub"""
     try:
-        print(f"Attempting to download {filename} from {repo_id}")
         file_path = hf_hub_download(
             repo_id=repo_id,
             filename=filename,
             token=HF_TOKEN
         )
-        print(f"Successfully downloaded {filename} to {file_path}")
         return file_path
     except Exception as e:
         print(f"Error downloading from Hugging Face: {str(e)}")
@@ -51,7 +134,6 @@ def create_response(data, status_code=200):
 def load_resources():
     global model, tokenizer
     try:
-        print("Starting to load resources from Hugging Face...")
         
         # Download and load model from Hugging Face
         try:
@@ -69,7 +151,6 @@ def load_resources():
                 # Load model with custom objects
                 model = load_model(model_path, compile=False, 
                                  custom_objects={'InputLayer': CustomInputLayer})
-                print("Model loaded successfully from Hugging Face")
             else:
                 raise Exception("Failed to download model from Hugging Face")
         except Exception as hf_model_error:
@@ -82,7 +163,6 @@ def load_resources():
             if tokenizer_path:
                 with open(tokenizer_path, 'rb') as f:
                     tokenizer = pickle.load(f)
-                print("Tokenizer loaded successfully from Hugging Face")
             else:
                 raise Exception("Failed to download tokenizer from Hugging Face")
         except Exception as hf_tokenizer_error:
@@ -92,7 +172,6 @@ def load_resources():
         if model is None or tokenizer is None:
             raise Exception("Model or tokenizer failed to load")
             
-        print("All resources loaded successfully!")
         return True
         
     except Exception as e:
@@ -118,8 +197,13 @@ def preprocess_text(text):
 def predict_hate_speech(text):
     try:
         if model is None or tokenizer is None:
-            print("Model or tokenizer not loaded")
+            logger.error("Model or tokenizer not loaded")
             return None, None
+            
+        # Check cache first
+        cached_result = get_cached_prediction(text)
+        if cached_result:
+            return cached_result
             
         # Preprocess the text
         processed_text = preprocess_text(text)
@@ -137,14 +221,24 @@ def predict_hate_speech(text):
         class_labels = ['hate_speech', 'offensive_language', 'neither']
         predicted_label = class_labels[predicted_class[0]]
         
-        return predicted_label, float(probability)
+        result = (predicted_label, float(probability))
+        
+        # Cache the result
+        cache_prediction(text, result)
+        
+        return result
     except Exception as e:
-        print(f"Error during prediction: {str(e)}")
+        logger.error(f"Error during prediction: {str(e)}", exc_info=True)
         return None, None
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
+        # Check rate limit
+        if not check_rate_limit(request.remote_addr):
+            return render_template('index.html', 
+                                error='Too many requests. Please try again later.')
+        
         text = request.form.get('text', '')
         if not text.strip():
             return render_template('index.html', error='Please enter some text to analyze')
@@ -185,6 +279,14 @@ def health_check():
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
+        # Check rate limit
+        if not check_rate_limit(request.remote_addr):
+            return create_response({
+                'status': 'error',
+                'message': 'Rate limit exceeded. Please try again later.',
+                'retry_after': RATE_LIMIT_WINDOW
+            }, 429)
+
         # Check content type
         if not request.is_json:
             return create_response({
@@ -202,6 +304,7 @@ def predict():
 
         # Check if model and tokenizer are loaded
         if model is None or tokenizer is None:
+            logger.error("Model or tokenizer not loaded")
             return create_response({
                 'status': 'error',
                 'message': 'Model not properly loaded. Please check server logs.'
@@ -225,14 +328,21 @@ def predict():
                 'message': 'Empty text provided'
             }, 400)
         
+        # Log the request
+        logger.info(f"Processing request for text: {text[:100]}...")
+        
         # Make prediction
         predicted_label, confidence = predict_hate_speech(text)
         
         if predicted_label is None:
+            logger.error("Prediction failed")
             return create_response({
                 'status': 'error',
                 'message': 'Error during prediction. Please check server logs.'
             }, 500)
+        
+        # Log the prediction
+        logger.info(f"Prediction result: {predicted_label} (confidence: {confidence:.2%})")
         
         return create_response({
             'status': 'success',
@@ -243,9 +353,10 @@ def predict():
             }
         })
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return create_response({
             'status': 'error',
-            'message': str(e)
+            'message': 'An unexpected error occurred'
         }, 500)
 
 # For local development

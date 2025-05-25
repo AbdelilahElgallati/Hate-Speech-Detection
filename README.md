@@ -1,70 +1,79 @@
-# Hate Speech Detection Web App
+# Hate Speech Detection API
 
-A web application that uses machine learning to detect hate speech and offensive language in text.
+A Flask-based API for detecting hate speech in text using machine learning.
 
-## Features
+## Project Structure
 
-- Real-time text analysis
-- Three classification categories: Hate Speech, Offensive Language, and Neither
-- Confidence score for predictions
-- Modern and responsive UI
-- REST API endpoints
-
-## Deployment to Vercel
-
-1. Install the Vercel CLI:
-```bash
-npm install -g vercel
+```
+hate-speech-detection/
+├── src/
+│   ├── app/
+│   │   ├── routes/
+│   │   │   └── main.py
+│   │   ├── services/
+│   │   │   └── hate_speech_detector.py
+│   │   ├── models/
+│   │   ├── utils/
+│   │   ├── templates/
+│   │   └── static/
+│   │       ├── css/
+│   │       ├── js/
+│   │       └── images/
+│   ├── config/
+│   │   └── config.py
+│   ├── tests/
+│   └── wsgi.py
+├── requirements.txt
+├── README.md
+└── .gitignore
 ```
 
-2. Login to Vercel:
-```bash
-vercel login
-```
+## Setup Instructions
 
-3. Deploy the application:
-```bash
-vercel
-```
+1. Create a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
 
-4. For production deployment:
-```bash
-vercel --prod
-```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Environment Variables
+3. Set up environment variables:
+   ```bash
+   export FLASK_ENV=development  # On Windows: set FLASK_ENV=development
+   ```
 
-Create a `.env` file in the root directory with the following variables:
-```
-HF_TOKEN=your_huggingface_token
-HF_REPO_ID=your_huggingface_repo_id
-```
-
-## Local Development
-
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-2. Run the application:
-```bash
-python app.py
-```
-
-The application will be available at `http://localhost:5000`
+4. Run the application:
+   ```bash
+   python src/wsgi.py
+   ```
 
 ## API Endpoints
 
-- `GET /`: Web interface
-- `POST /`: Submit text for analysis
+- `POST /predict`: Predict if text contains hate speech
+  - Request body: `{"text": "your text here"}`
+  - Response: `{"prediction": 0/1, "probability": float, "processed_text": string}`
+
 - `GET /health`: Health check endpoint
-- `POST /predict`: API endpoint for predictions
+  - Response: `{"status": "healthy"}`
 
-## Technologies Used
+## Development
 
-- Flask
-- TensorFlow
-- Hugging Face Hub
-- Tailwind CSS
-- Vercel
+- Run tests: `pytest`
+- Format code: `black src/`
+- Lint code: `flake8 src/`
+
+## Deployment
+
+The application can be deployed using Gunicorn:
+
+```bash
+gunicorn --config gunicorn_config.py src.wsgi:app
+```
+
+## License
+
+MIT
